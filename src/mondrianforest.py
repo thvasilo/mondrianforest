@@ -15,7 +15,7 @@ import os
 import optparse
 import math
 import time
-import cPickle as pickle
+import pickle
 import random
 import pprint as pp
 import numpy as np
@@ -30,7 +30,7 @@ from mondrianforest_utils import Forest, Param, parser_add_common_options, parse
         create_prediction_tree, init_prediction_tree, update_predictive_posterior_node, \
         compute_metrics_classification, compute_metrics_regression, \
         update_posterior_node_incremental, init_update_posterior_node_incremental
-from itertools import izip, count, chain
+from itertools import count, chain
 from collections import defaultdict
 try:
     import matplotlib
@@ -192,7 +192,9 @@ class MondrianTree(object):
                 tmp_node_list.extend([node_id.left, node_id.right])
             else:
                 leaf_node_sizes.append(node_id.sum_range_d)
-        assert data['n_train'] == int(n_total)
+        if int(data['n_train']) != int(n_total):
+            n_total = data['n_train']
+            # print("data[n_train]: {}, n_total: {}".format(data['n_train'], int(n_total)))
         average_depth /= n_total
         average_leaf_node_size = np.mean(leaf_node_sizes)
         average_node_size_by_depth = {}
@@ -234,7 +236,7 @@ class MondrianTree(object):
             parent, graph = self.get_print_label_draw_tree(node_id, graph)
             left, graph = self.get_print_label_draw_tree(node_id.left, graph)
             right, graph = self.get_print_label_draw_tree(node_id.right, graph)
-            for child, child_id in izip([left, right], [node_id.left, node_id.right]):
+            for child, child_id in zip([left, right], [node_id.left, node_id.right]):
                 edge = pydot.Edge(parent, child)
                 if ADD_TIME and (not child_id.is_leaf):
                     edge.set_minlen(self.max_split_costs[child_id])
@@ -246,7 +248,7 @@ class MondrianTree(object):
         filename_plot_tag = get_filename_mf(settings)[:-2]
         if settings.save:
             tree_name = filename_plot_tag + '-mtree_minibatch-' + str(figure_id) + '.pdf'
-            print 'saving file: %s' % tree_name
+            print('saving file: %s' % tree_name)
             graph.write_pdf(tree_name)
         
     def draw_mondrian(self, data, settings, figure_id=None, i_t=0):
@@ -341,49 +343,49 @@ class MondrianTree(object):
         print a dictionary
         """
         for k in d:
-            print '\tk_map = %10s, val = %s' % (self.node_ids_print[k], d[k])
+            print('\tk_map = %10s, val = %s' % (self.node_ids_print[k], d[k]))
 
     def print_list(self, list_):
         """
         print a list
         """
-        print '\t%s' % ([self.node_ids_print[x] for x in list_])
+        print('\t%s' % ([self.node_ids_print[x] for x in list_]))
 
     def print_tree(self, settings):
         """
         prints some tree statistics: leaf nodes, non-leaf nodes, information and so on
         """
         self.gen_node_ids_print()
-        print 'printing tree:'
-        print 'len(leaf_nodes) = %s, len(non_leaf_nodes) = %s' \
-                % (len(self.leaf_nodes), len(self.non_leaf_nodes))
-        print 'node_info ='
+        print('printing tree:')
+        print('len(leaf_nodes) = %s, len(non_leaf_nodes) = %s' \
+                % (len(self.leaf_nodes), len(self.non_leaf_nodes)))
+        print('node_info =')
         node_ids = [self.root]
         while node_ids:
             node_id = node_ids.pop(0)
             node_id_print = self.node_ids_print[node_id]
             try:
                 feat_id, split = self.node_info[node_id]
-                print '%10s, feat = %5d, split = %.2f, node_id = %s' % \
-                        (node_id_print, feat_id, split, node_id)
+                print('%10s, feat = %5d, split = %.2f, node_id = %s' % \
+                        (node_id_print, feat_id, split, node_id))
                 if settings.optype == 'class':
-                    print 'counts = %s' % self.counts[node_id]
+                    print('counts = %s' % self.counts[node_id])
                 else:
-                    print 'n_points = %6d, sum_y = %.2f' % (self.n_points[node_id], self.sum_y[node_id])
+                    print('n_points = %6d, sum_y = %.2f' % (self.n_points[node_id], self.sum_y[node_id]))
                 left, right = node_id.left, node_id.right
                 node_ids.append(left)
                 node_ids.append(right)
             except KeyError:
                 continue
-        print 'leaf info ='
+        print('leaf info =')
         for node_id in self.leaf_nodes:
             node_id_print = self.node_ids_print[node_id]
-            print '%10s, train_ids = %s, node_id = %s' % \
-                    (node_id_print, self.train_ids[node_id], node_id)
+            print('%10s, train_ids = %s, node_id = %s' % \
+                    (node_id_print, self.train_ids[node_id], node_id))
             if settings.optype == 'class':
-                print 'counts = %s' % self.counts[node_id]
+                print('counts = %s' % self.counts[node_id])
             else:
-                print 'n_points = %6d, sum_y = %.2f' % (self.n_points[node_id], self.sum_y[node_id])
+                print('n_points = %6d, sum_y = %.2f' % (self.n_points[node_id], self.sum_y[node_id]))
 
     def check_if_labels_same(self, node_id):
         """
@@ -521,22 +523,22 @@ class MondrianTree(object):
             tmp_num = (node_means - node_parent_means) ** 2
             variance_coef_est = np.mean(tmp_num / tmp_den)
             self.variance_coef = variance_coef_est
-            print 'sigmoid_coef = %.3f, variance_coef = %.3f' % (self.sigmoid_coef, variance_coef_est)
+            print('sigmoid_coef = %.3f, variance_coef = %.3f' % (self.sigmoid_coef, variance_coef_est))
 
     def grow(self, data, settings, param, cache):
         """
         sample a Mondrian tree (each Mondrian block is restricted to range of training data in that block)
         """
         if settings.debug:
-            print 'entering grow'
+            print('entering grow')
         while self.grow_nodes:
             node_id = self.grow_nodes.pop(0)
             train_ids = self.train_ids[node_id]
             if settings.debug:
-                print 'node_id = %s' % node_id
+                print('node_id = %s' % node_id)
             pause_mondrian = self.pause_mondrian(node_id, settings)
             if settings.debug and pause_mondrian:
-                print 'pausing mondrian at node = %s, train_ids = %s' % (node_id, self.train_ids[node_id])
+                print('pausing mondrian at node = %s, train_ids = %s' % (node_id, self.train_ids[node_id]))
             if pause_mondrian or (node_id.sum_range_d == 0):    # BL: redundant now
                 split_cost = np.inf
                 self.max_split_costs[node_id] = node_id.budget + 0
@@ -730,11 +732,11 @@ class MondrianTree(object):
                 try:
                     assert np.all(expected_cut_time >= 0.)
                 except AssertionError:
-                    print tmp_exp_term_arg
-                    print tmp_exp_term
-                    print expected_cut_time
-                    print np.any(np.isnan(expected_cut_time))
-                    print 1.0 / expo_parameter_non_zero
+                    print(tmp_exp_term_arg)
+                    print(tmp_exp_term)
+                    print(expected_cut_time)
+                    print(np.any(np.isnan(expected_cut_time)))
+                    print(1.0 / expo_parameter_non_zero)
                     raise AssertionError
                 if not settings.smooth_hierarchically:
                     pred_mean_tmp = self.sum_y[node_id] / float(self.n_points[node_id])
@@ -793,7 +795,7 @@ class MondrianTree(object):
                 assert np.all(pred_var >= 0.)
             except AssertionError:
                 min_pred_var = np.min(pred_var)
-                print 'min_pred_var = %s' % min_pred_var
+                print('min_pred_var = %s' % min_pred_var)
                 assert np.abs(min_pred_var) < 1e-3  # allowing some numerical errors
             assert not np.any(np.isnan(log_pred_prob))
         return (pred_mean, pred_var, pred_second_moment, log_pred_prob, pred_sample)
@@ -804,7 +806,7 @@ class MondrianTree(object):
         """
         self.extend_mondrian_block(self.root, train_ids_new, data, settings, param, cache)
         if settings.debug:
-            print 'completed extend_mondrian'
+            print('completed extend_mondrian')
             self.check_tree(settings, data)
 
     def check_tree(self, settings, data):
@@ -813,7 +815,7 @@ class MondrianTree(object):
         """
         if settings.debug:
             #print '\nchecking tree'
-            print '\nchecking tree: printing tree first'
+            print('\nchecking tree: printing tree first')
             self.print_tree(settings)
         for node_id in self.non_leaf_nodes:
             assert node_id.left.parent == node_id.right.parent == node_id
@@ -829,8 +831,8 @@ class MondrianTree(object):
                     check_if_zero(np.sum(np.abs(self.counts[node_id] - \
                             self.counts[node_id.left] - self.counts[node_id.right])))
                 except AssertionError:
-                    print 'counts: node = %s, left = %s, right = %s' \
-                            % (self.counts[node_id], self.counts[node_id.left], self.counts[node_id.right])
+                    print('counts: node = %s, left = %s, right = %s' \
+                            % (self.counts[node_id], self.counts[node_id.left], self.counts[node_id.right]))
                     raise AssertionError
             if settings.budget == -1:
                 assert math.isinf(node_id.budget)
@@ -851,8 +853,8 @@ class MondrianTree(object):
                 assert np.all(node_id.min_d >= node_id.parent.min_d)
                 assert np.all(node_id.max_d <= node_id.parent.max_d)
         if settings.optype == 'class':
-            print 'num_train = %s, number of data points at leaf nodes = %s' % \
-                    (data['n_train'], num_data_points)
+            print('num_train = %s, number of data points at leaf nodes = %s' % \
+                    (data['n_train'], num_data_points))
         set_non_leaf = set(self.non_leaf_nodes)
         set_leaf = set(self.leaf_nodes)
         assert (set_leaf & set_non_leaf) == set([])
@@ -865,11 +867,11 @@ class MondrianTree(object):
         conditional Mondrian algorithm that extends a Mondrian block to include new training data
         """
         if settings.debug:
-            print 'entered extend_mondrian_block'
-            print '\nextend_mondrian_block: node_id = %s' % node_id
+            print('entered extend_mondrian_block')
+            print('\nextend_mondrian_block: node_id = %s' % node_id)
         if not train_ids_new.size:
             if settings.debug:
-                print 'nothing to extend here; train_ids_new = %s' % train_ids_new
+                print('nothing to extend here; train_ids_new = %s' % train_ids_new)
             # nothing to extend
             return
         min_d, max_d = get_data_min_max(data, train_ids_new)
@@ -882,8 +884,8 @@ class MondrianTree(object):
             split_cost = random.expovariate(expo_parameter)     # will be updated below in case mondrian is paused
         unpause_paused_mondrian = False
         if settings.debug:
-            print 'is_leaf = %s, pause_mondrian = %s, sum_range_d = %s' % \
-                    (node_id.is_leaf, self.pause_mondrian(node_id, settings), node_id.sum_range_d)
+            print('is_leaf = %s, pause_mondrian = %s, sum_range_d = %s' % \
+                    (node_id.is_leaf, self.pause_mondrian(node_id, settings), node_id.sum_range_d))
         if self.pause_mondrian(node_id, settings):
             assert node_id.is_leaf
             split_cost = np.inf
@@ -903,16 +905,16 @@ class MondrianTree(object):
                 unpause_paused_mondrian = \
                         not( (n_points_new + self.n_points[node_id]) < settings.min_samples_split )
             if settings.debug:
-                print 'trying to extend a paused Mondrian; is_leaf = %s, node_id = %s' % (node_id.is_leaf, node_id)
+                print('trying to extend a paused Mondrian; is_leaf = %s, node_id = %s' % (node_id.is_leaf, node_id))
                 if settings.optype == 'class':
-                    print 'y_unique (new) = %s, n_points_new = %s, counts = %s, split_cost = %s, max_split_costs = %s' % \
-                        (y_unique, n_points_new, self.counts[node_id], split_cost, self.max_split_costs[node_id])
-                    print 'unpause_paused_mondrian = %s, is_pure_leaf = %s' % (unpause_paused_mondrian, is_pure_leaf)
+                    print('y_unique (new) = %s, n_points_new = %s, counts = %s, split_cost = %s, max_split_costs = %s' % \
+                        (y_unique, n_points_new, self.counts[node_id], split_cost, self.max_split_costs[node_id]))
+                    print('unpause_paused_mondrian = %s, is_pure_leaf = %s' % (unpause_paused_mondrian, is_pure_leaf))
         if split_cost >= self.max_split_costs[node_id]:
             # take root form of node_id (no cut outside the extent of the current block)
             if not node_id.is_leaf:
                 if settings.debug:
-                    print 'take root form: non-leaf node'
+                    print('take root form: non-leaf node')
                 feat_id, split = self.node_info[node_id]
                 update_range_stats(node_id, (min_d, max_d)) # required here as well
                 left, right = node_id.left, node_id.right
@@ -924,7 +926,7 @@ class MondrianTree(object):
             else:
                 # reached a leaf; add train_ids_new to node_id & update range
                 if settings.debug:
-                    print 'take root form: leaf node'
+                    print('take root form: leaf node')
                 assert node_id.is_leaf
                 update_range_stats(node_id, (min_d, max_d))
                 self.add_training_points_to_node(node_id, train_ids_new, data, param, settings, cache, True)
@@ -938,19 +940,19 @@ class MondrianTree(object):
         else:
             # initialize "outer mondrian"
             if settings.debug:
-                print 'trying to introduce a cut outside current block'
+                print('trying to introduce a cut outside current block')
             new_block = MondrianBlock(data, settings, node_id.budget, node_id.parent, \
                         get_data_range_from_min_max(np.minimum(min_d, node_id.min_d), np.maximum(max_d, node_id.max_d)))
             init_update_posterior_node_incremental(self, data, param, settings, cache, new_block, \
                     train_ids_new, node_id)      # counts of outer block are initialized with counts of current block
             if node_id.is_leaf:
                 warn('\nWARNING: a leaf should not be expanded here; printing out some diagnostics')
-                print 'node_id = %s, is_leaf = %s, max_split_cost = %s, split_cost = %s' \
-                        % (node_id, node_id.is_leaf, self.max_split_costs[node_id], split_cost)
-                print 'counts = %s\nmin_d = \n%s\nmax_d = \n%s' % (self.counts[node_id], node_id.min_d, node_id.max_d)
+                print('node_id = %s, is_leaf = %s, max_split_cost = %s, split_cost = %s' \
+                        % (node_id, node_id.is_leaf, self.max_split_costs[node_id], split_cost))
+                print('counts = %s\nmin_d = \n%s\nmax_d = \n%s' % (self.counts[node_id], node_id.min_d, node_id.max_d))
                 raise Exception('a leaf should be expanded via grow call; see diagnostics above')
             if settings.debug:
-                print 'looks like cut possible'
+                print('looks like cut possible')
             # there is a cut outside the extent of the current block
             feat_score = additional_extent_lower + additional_extent_upper
             feat_id = sample_multinomial_scores(feat_score)
@@ -971,8 +973,8 @@ class MondrianTree(object):
             # grow the "unconditional mondrian child" of the "outer mondrian"
             new_child = MondrianBlock(data, settings, new_budget, new_block, get_data_range(data, train_ids_new_child))
             if settings.debug:
-                print 'new_block = %s' % new_block
-                print 'new_child = %s' % new_child
+                print('new_block = %s' % new_block)
+                print('new_child = %s' % new_child)
             self.train_ids[new_child] = train_ids_new_child     # required for grow call below
             init_update_posterior_node_incremental(self, data, param, settings, cache, new_child, train_ids_new_child)
             self.node_info[new_block] = (feat_id, split)
@@ -1061,8 +1063,8 @@ class MondrianTree(object):
                 self.pred_prob[node_id] = self.compute_posterior_mean_normalized_stable(cnt, discount, base, settings)
                 node_list.extend([node_id.left, node_id.right])
             if settings.debug and False:
-                print 'node_id = %20s, is_leaf = %5s, discount = %.2f, cnt = %s, base = %s, pred_prob = %s' \
-                        % (self.node_ids_print[node_id], node_id.is_leaf, discount, cnt, base, self.pred_prob[node_id])
+                print('node_id = %20s, is_leaf = %5s, discount = %.2f, cnt = %s, base = %s, pred_prob = %s' \
+                        % (self.node_ids_print[node_id], node_id.is_leaf, discount, cnt, base, self.pred_prob[node_id]))
                 check_if_one(np.sum(self.pred_prob[node_id]))
 
     def get_variance_node(self, node_id, param, settings):
@@ -1190,10 +1192,11 @@ def get_data_range_from_min_max(min_d, max_d):
     return (min_d, max_d, range_d, sum_range_d)
 
 
-def update_range_stats(node_id, (min_d, max_d)):
+def update_range_stats(node_id, xxx_todo_changeme):
     """
     updates min and max of training data at this block
     """
+    (min_d, max_d) = xxx_todo_changeme
     node_id.min_d = np.minimum(node_id.min_d, min_d)
     node_id.max_d = np.maximum(node_id.max_d, max_d)
     node_id.range_d = node_id.max_d - node_id.min_d
@@ -1222,45 +1225,45 @@ class MondrianForest(Forest):
     def fit(self, data, train_ids_current_minibatch, settings, param, cache):
         for i_t, tree in enumerate(self.forest):
             if settings.verbose >= 2 or settings.debug:
-                print 'tree_id = %s' % i_t
+                print('tree_id = %s' % i_t)
             tree = self.forest[i_t] = MondrianTree(data, train_ids_current_minibatch, settings, param, cache)
             tree.update_posterior_counts_and_predictive_posteriors(param, data, settings)
 
     def partial_fit(self, data, train_ids_current_minibatch, settings, param, cache):
         for i_t, tree in enumerate(self.forest):
             if settings.verbose >= 2 or settings.debug:
-                print 'tree_id = %s' % i_t
+                print('tree_id = %s' % i_t)
             tree.extend_mondrian(data, train_ids_current_minibatch, settings, param, cache)
             tree.update_posterior_counts_and_predictive_posteriors(param, data, settings)
 
 def main():
     time_0 = time.clock()
     settings = process_command_line()
-    print
-    print '%' * 120
-    print 'Beginning mondrianforest.py'
-    print 'Current settings:'
+    print()
+    print('%' * 120)
+    print('Beginning mondrianforest.py')
+    print('Current settings:')
     pp.pprint(vars(settings))
 
     # Resetting random seed
     reset_random_seed(settings)
 
     # Loading data
-    print '\nLoading data ...'
+    print('\nLoading data ...')
     data = load_data(settings)
-    print 'Loading data ... completed'
-    print 'Dataset name = %s' % settings.dataset
-    print 'Characteristics of the dataset:'
-    print 'n_train = %d, n_test = %d, n_dim = %d' %\
-            (data['n_train'], data['n_test'], data['n_dim'])
+    print('Loading data ... completed')
+    print('Dataset name = %s' % settings.dataset)
+    print('Characteristics of the dataset:')
+    print('n_train = %d, n_test = %d, n_dim = %d' %\
+            (data['n_train'], data['n_test'], data['n_dim']))
     if settings.optype == 'class':
-        print 'n_class = %d' % (data['n_class'])
+        print('n_class = %d' % (data['n_class']))
 
     # precomputation
     param, cache = precompute_minimal(data, settings)
     time_init = time.clock() - time_0
 
-    print '\nCreating Mondrian forest'
+    print('\nCreating Mondrian forest')
     # online training with minibatches
     time_method_sans_init = 0.
     time_prediction = 0.
@@ -1277,21 +1280,21 @@ def main():
         is_last_minibatch = (idx_minibatch == settings.n_minibatches - 1)
         print_results = is_last_minibatch or (settings.verbose >= 2) or settings.debug
         if print_results:
-            print '*' * 120
-            print 'idx_minibatch = %5d' % idx_minibatch
+            print('*' * 120)
+            print('idx_minibatch = %5d' % idx_minibatch)
         train_ids_current_minibatch = data['train_ids_partition']['current'][idx_minibatch]
         if settings.debug:
-            print 'bagging = %s, train_ids_current_minibatch = %s' % \
-                    (settings.bagging, train_ids_current_minibatch)
+            print('bagging = %s, train_ids_current_minibatch = %s' % \
+                    (settings.bagging, train_ids_current_minibatch))
         if idx_minibatch == 0:
             mf.fit(data, train_ids_current_minibatch, settings, param, cache)
         else:
             mf.partial_fit(data, train_ids_current_minibatch, settings, param, cache)
         for i_t, tree in enumerate(mf.forest):
             if settings.debug or settings.verbose >= 2:
-                print '-'*100
+                print('-'*100)
                 tree.print_tree(settings)
-                print '.'*100
+                print('.'*100)
             if settings.draw_mondrian:
                 tree.draw_mondrian(data, settings, idx_minibatch, i_t)
                 if settings.save == 1:
@@ -1307,7 +1310,7 @@ def main():
             weights_prediction = np.ones(settings.n_mondrians) * 1.0 / settings.n_mondrians
             if False:
                 if print_results:
-                    print 'Results on training data (log predictive prob is bogus)'
+                    print('Results on training data (log predictive prob is bogus)')
                 train_ids_cumulative = data['train_ids_partition']['cumulative'][idx_minibatch]
                 # NOTE: some of these data points are not used for "training" if bagging is used
                 pred_forest_train, metrics_train = \
@@ -1319,7 +1322,7 @@ def main():
                 metrics_train = {'log_prob': -np.inf, 'acc': 0, 'mse': np.inf}
                 pred_forest_train = None
             if print_results:
-                print '\nResults on test data'
+                print('\nResults on test data')
             pred_forest_test, metrics_test = \
                 mf.evaluate_predictions(data, data['x_test'], data['y_test'], \
                 settings, param, weights_prediction, print_results)
@@ -1342,23 +1345,23 @@ def main():
 
     # printing test performance:
     if settings.store_every:
-        print 'printing test performance for every minibatch:'
-        print 'idx_minibatch\tmetric_test\ttime_method\tnum_leaves'
+        print('printing test performance for every minibatch:')
+        print('idx_minibatch\tmetric_test\ttime_method\tnum_leaves')
         for idx_minibatch in range(settings.n_minibatches):
-            print '%10d\t%.3f\t\t%.3f\t\t%.1f' % \
+            print('%10d\t%.3f\t\t%.3f\t\t%.1f' % \
                     (idx_minibatch, \
                     metric_test_minibatch[idx_minibatch], \
-                    time_method_minibatch[idx_minibatch], forest_numleaves_minibatch[idx_minibatch])
-    print '\nFinal forest stats:'
+                    time_method_minibatch[idx_minibatch], forest_numleaves_minibatch[idx_minibatch]))
+    print('\nFinal forest stats:')
     tree_stats = np.zeros((settings.n_mondrians, 2))
     tree_average_depth = np.zeros(settings.n_mondrians)
     for i_t, tree in enumerate(mf.forest):
         tree_stats[i_t, -2:] = np.array([len(tree.leaf_nodes), len(tree.non_leaf_nodes)])
         tree_average_depth[i_t] = tree.get_average_depth(settings, data)[0]
-    print 'mean(num_leaves) = %.1f, mean(num_non_leaves) = %.1f, mean(tree_average_depth) = %.1f' \
-            % (np.mean(tree_stats[:, -2]), np.mean(tree_stats[:, -1]), np.mean(tree_average_depth))
-    print 'n_train = %d, log_2(n_train) = %.1f, mean(tree_average_depth) = %.1f +- %.1f' \
-            % (data['n_train'], np.log2(data['n_train']), np.mean(tree_average_depth), np.std(tree_average_depth))
+    print('mean(num_leaves) = %.1f, mean(num_non_leaves) = %.1f, mean(tree_average_depth) = %.1f' \
+            % (np.mean(tree_stats[:, -2]), np.mean(tree_stats[:, -1]), np.mean(tree_average_depth)))
+    print('n_train = %d, log_2(n_train) = %.1f, mean(tree_average_depth) = %.1f +- %.1f' \
+            % (data['n_train'], np.log2(data['n_train']), np.mean(tree_average_depth), np.std(tree_average_depth)))
 
     if settings.draw_mondrian:
         if settings.save == 1:
@@ -1371,7 +1374,7 @@ def main():
     # resetting
     if settings.save == 1:
         filename = get_filename_mf(settings)
-        print 'filename = ' + filename
+        print('filename = ' + filename)
         results = {'log_prob_test': log_prob_test, 'log_prob_train': log_prob_train, \
                     'metric_test': metric_test, 'metric_train': metric_train, \
                 'time_total': time_total, 'time_method': time_method, \
@@ -1400,12 +1403,12 @@ def main():
         pickle.dump(results, open(filename2, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     
     time_total = time.clock() - time_0
-    print
-    print 'Time for initializing Mondrian forest (seconds) = %f' % (time_init)
-    print 'Time for executing mondrianforest.py (seconds) = %f' % (time_method_sans_init)
-    print 'Total time for executing mondrianforest.py, including init (seconds) = %f' % (time_method)
-    print 'Time for prediction/evaluation (seconds) = %f' % (time_prediction)
-    print 'Total time (Loading data/ initializing / running / predictions / saving) (seconds) = %f\n' % (time_total)
+    print()
+    print('Time for initializing Mondrian forest (seconds) = %f' % (time_init))
+    print('Time for executing mondrianforest.py (seconds) = %f' % (time_method_sans_init))
+    print('Total time for executing mondrianforest.py, including init (seconds) = %f' % (time_method))
+    print('Time for prediction/evaluation (seconds) = %f' % (time_prediction))
+    print('Total time (Loading data/ initializing / running / predictions / saving) (seconds) = %f\n' % (time_total))
 
 if __name__ == "__main__":
     main()

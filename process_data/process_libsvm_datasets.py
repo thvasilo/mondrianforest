@@ -6,7 +6,7 @@
 
 import sys
 import numpy as np
-import cPickle as pickle
+import pickle as pickle
 from sklearn.datasets import load_svmlight_file
 
 def get_x_y(filename, name):
@@ -44,11 +44,11 @@ data['n_class'] = len(np.unique(y))
 try:
     assert data['n_class'] == max(np.unique(y)) + 1
 except AssertionError:
-    print 'np.unique(y) = %s' % np.unique(y)
+    print('np.unique(y) = %s' % np.unique(y))
     raise AssertionError
 data['is_sparse'] = False
 
-print 'name = %10s, n_dim = %5d, n_class = %5d, n_train = %5d, n_test = %5d' \
-        % (name, data['n_dim'], data['n_class'], data['n_train'], data['n_test'])
+print('name = %10s, n_dim = %5d, n_class = %5d, n_train = %5d, n_test = %5d' \
+        % (name, data['n_dim'], data['n_class'], data['n_train'], data['n_test']))
 
 pickle.dump(data, open(name + '/' + name + ".p", "wb"), protocol=pickle.HIGHEST_PROTOCOL)

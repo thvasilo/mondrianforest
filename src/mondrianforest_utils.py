@@ -5,10 +5,10 @@
 import sys
 import math
 import optparse
-import cPickle as pickle
+import pickle
 import numpy as np
 import random
-from itertools import izip
+
 import scipy.io
 from warnings import warn
 try:
@@ -18,17 +18,17 @@ try:
     import scipy.stats
     from scipy.stats.stats import pearsonr
 except:
-    print 'Error loading scipy modules; might cause error later'
+    print('Error loading scipy modules; might cause error later')
 from copy import copy
 try:
     from sklearn import feature_selection
 except:
-    print 'Error loading sklearn; might cause error later'
+    print('Error loading sklearn; might cause error later')
 try:
     import matplotlib.pyplot as plt       # uncomment if you need to plot
     from mpl_toolkits.mplot3d import Axes3D
 except:
-    print 'Error loading matplotlib; might cause error later'
+    print('Error loading matplotlib; might cause error later')
 from utils import hist_count, logsumexp, softmax, sample_multinomial, \
         sample_multinomial_scores, empty, assert_no_nan, linear_regression, \
         check_if_zero, check_if_one, logsumexp_array
@@ -48,7 +48,7 @@ class Forest(object):
         if settings.debug:
             check_if_one(weights.sum())
         if settings.verbose >= 2:
-            print 'weights = \n%s' % weights
+            print('weights = \n%s' % weights)
         for i_t, tree in enumerate(self.forest):
             pred_all = evaluate_predictions_tree(tree, x, y, data, param, settings)
             if settings.optype == 'class':
@@ -68,14 +68,14 @@ class Forest(object):
             # NOTE: logpdf takes in variance
             log_prob2 = compute_gaussian_logpdf(pred_forest['pred_mean'], pred_forest['pred_var'], y)
             if settings.verbose >= 1:
-                print 'log_prob (using Gaussian approximation) = %f' % np.mean(log_prob2)
-                print 'log_prob (using mixture of Gaussians) = %f' % np.mean(pred_forest['log_pred_prob'])
+                print('log_prob (using Gaussian approximation) = %f' % np.mean(log_prob2))
+                print('log_prob (using mixture of Gaussians) = %f' % np.mean(pred_forest['log_pred_prob']))
             try:
                 assert np.all(pred_forest['pred_prob'] > 0.)
             except AssertionError:
-                print 'pred prob not > 0'
-                print 'min value = %s' % np.min(pred_forest['pred_prob'])
-                print 'sorted array = %s' % np.sort(pred_forest['pred_prob'])
+                print('pred prob not > 0')
+                print('min value = %s' % np.min(pred_forest['pred_prob']))
+                print('sorted array = %s' % np.sort(pred_forest['pred_prob']))
                 # raise AssertionError
         if settings.debug and settings.optype == 'class':
             check_if_zero(np.mean(np.sum(pred_forest['pred_prob'], axis=1) - 1))
@@ -88,10 +88,10 @@ class Forest(object):
                 metrics['log_prob2'] = log_prob2
         if print_results:
             if settings.optype == 'class':
-                print 'Averaging over all trees, accuracy = %f' % metrics['acc']
+                print('Averaging over all trees, accuracy = %f' % metrics['acc'])
             else:
-                print 'Averaging over all trees, mse = %f, rmse = %f, log_prob = %f' % (metrics['mse'], \
-                        math.sqrt(metrics['mse']), metrics['log_prob'])
+                print('Averaging over all trees, mse = %f, rmse = %f, log_prob = %f' % (metrics['mse'], \
+                        math.sqrt(metrics['mse']), metrics['log_prob']))
         return (pred_forest, metrics)
 
 
@@ -205,8 +205,8 @@ def parser_check_mf_options(parser, settings):
 
 def fail(parser, condition, msg):
     if condition:
-        print msg
-        print
+        print(msg)
+        print()
         parser.print_help()
         sys.exit(1)
 
@@ -233,8 +233,8 @@ def check_dataset(settings):
             else:
                 assert(settings.dataset in regression_datasets)
         except AssertionError:
-            print 'Unrecognized dataset for optype; dataset = %s, optype = %s' % \
-                    (settings.dataset, settings.optype)
+            print('Unrecognized dataset for optype; dataset = %s, optype = %s' % \
+                    (settings.dataset, settings.optype))
             #raise AssertionError
     return special_cases
 
@@ -261,7 +261,7 @@ def load_data(settings):
         filename = settings.data_path + 'airline-delays/' + settings.dataset + '.p'
         data = pickle.load(open(filename, 'rb'))
     else:
-        print 'Unknown dataset: ' + settings.dataset
+        print('Unknown dataset: ' + settings.dataset)
         raise Exception
     assert(not data['is_sparse'])
     try:
@@ -291,9 +291,9 @@ def load_data(settings):
         flag_relevant = scores_sorted > (scores_sorted[-1] * 0.05)  # FIXME: better way to set threshold? 
         idx_feat_selected = idx_sorted[flag_relevant]
         assert len(idx_feat_selected) >= 1
-        print scores
-        print scores_sorted
-        print idx_sorted
+        print(scores)
+        print(scores_sorted)
+        print(idx_sorted)
         # plt.plot(scores_sorted)
         # plt.show()
         if False:
@@ -331,7 +331,7 @@ def load_data(settings):
             if is_last_minibatch:
                 # including the last (data[n_train'] % settings.n_minibatches) indices along with indices in idx_tmp
                 idx_tmp = np.arange(idx_minibatch * n_points_per_minibatch, data['n_train'])
-            train_ids_current = train_ids[idx_tmp]
+            train_ids_current = train_ids[idx_tmp.astype(int)]
             # print idx_minibatch, train_ids_current
             data['train_ids_partition']['current'][idx_minibatch] = train_ids_current
             train_ids_cumulative = np.append(train_ids_cumulative, train_ids_current)
@@ -451,7 +451,7 @@ def load_toy_data():
     data = {'x_train': x_train, 'y_train': y_train, 'n_class': n_class, \
             'n_dim': n_dim, 'n_train': n_train, 'x_test': x_test, \
             'y_test': y_test, 'n_test': n_test, 'is_sparse': False}
-    print data
+    print(data)
     return data
  
 
@@ -553,7 +553,7 @@ def get_tree_limits(p, data):
         if node_id not in p.node_info:
             continue
         x0_min, x0_max, x1_min, x1_max = d_extent[node_id]
-        print p_d[node_id]
+        print(p_d[node_id])
         feat_id, split, idx_split_global = p_d[node_id]
         if feat_id == 0:
             vlines_list.append([split, x1_min, x1_max])
@@ -574,7 +574,7 @@ def bootstrap(train_ids, settings=None):
     n = len(train_ids)
     cnt_all = np.random.poisson(1, n)
     op = []
-    for train_id, cnt in izip(train_ids, cnt_all):
+    for train_id, cnt in zip(train_ids, cnt_all):
         op.extend([train_id] * cnt)
     return np.array(op)
 
@@ -632,7 +632,7 @@ def compute_metrics_classification(y_test, pred_prob, do_not_compute_log_prob=Fa
                 assert(not np.isinf(abs(log_tmp_pred)))
             except AssertionError:
                 'print abs(log_tmp_pred) = inf in compute_metrics_classification; tmp = '
-                print tmp
+                print(tmp)
                 raise AssertionError
             log_prob += log_tmp_pred
     acc /= (n + 1)
@@ -650,12 +650,12 @@ def test_compute_metrics_classification():
     pred_prob = np.random.rand(n, n_class)
     y = np.ones(n)
     metrics = compute_metrics_classification(y, pred_prob)
-    print 'chk if same: %s, %s' % (metrics['log_prob'], np.mean(np.log(pred_prob[:, 1])))
+    print('chk if same: %s, %s' % (metrics['log_prob'], np.mean(np.log(pred_prob[:, 1]))))
     assert(np.abs(metrics['log_prob']  - np.mean(np.log(pred_prob[:, 1]))) < 1e-10)
     pred_prob[:, 1] = 1e5
     metrics = compute_metrics_classification(y, pred_prob)
     assert np.abs(metrics['acc'] - 1) < 1e-3
-    print 'chk if same: %s, 1.0' % (metrics['acc'])
+    print('chk if same: %s, 1.0' % (metrics['acc']))
 
 
 def compute_metrics_regression(y_test, pred_mean, pred_prob=None):
@@ -673,7 +673,7 @@ def test_compute_metrics_regression():
     y = np.random.randn(n)
     pred = np.ones(n)
     metrics = compute_metrics_regression(y, pred, pred_prob)
-    print 'chk if same: %s, %s' % (metrics['mse'], np.mean((y - 1) ** 2))
+    print('chk if same: %s, %s' % (metrics['mse'], np.mean((y - 1) ** 2)))
     assert np.abs(metrics['mse'] - np.mean((y - 1) ** 2)) < 1e-3
 
 
@@ -682,7 +682,7 @@ def is_split_valid(split_chosen, x_min, x_max):
         assert(split_chosen > x_min)
         assert(split_chosen < x_max)
     except AssertionError:
-        print 'split_chosen <= x_min or >= x_max'
+        print('split_chosen <= x_min or >= x_max')
         raise AssertionError
 
 
@@ -713,7 +713,7 @@ def compute_dirichlet_normalizer(cnt, alpha=0.0, prior_term=None):
     try:
         assert(len(cnt.shape) == 1)
     except AssertionError:
-        print 'cnt should be a 1-dimensional np array'
+        print('cnt should be a 1-dimensional np array')
         raise AssertionError
     n_class = float(len(cnt))
     if prior_term is None:
@@ -763,9 +763,9 @@ def compute_left_right_statistics(data, param, cache, train_ids, feat_id_chosen,
         cache_tmp['sum_y2_right'] = np.sum(data['y_train'][train_ids_right] ** 2)
         cache_tmp['n_points_right'] = len(train_ids_right)
     if settings.verbose >= 2:
-        print 'feat_id_chosen = %s, split_chosen = %s' % (feat_id_chosen, split_chosen)
-        print 'y (left) = %s\ny (right) = %s' % (data['y_train'][train_ids_left], \
-                                                    data['y_train'][train_ids_right])
+        print('feat_id_chosen = %s, split_chosen = %s' % (feat_id_chosen, split_chosen))
+        print('y (left) = %s\ny (right) = %s' % (data['y_train'][train_ids_left], \
+                                                    data['y_train'][train_ids_right]))
     return(train_ids_left, train_ids_right, cache_tmp)
 
 
@@ -797,8 +797,8 @@ def precompute_minimal(data, settings):
     if settings.optype == 'class':
         param.alpha = settings.alpha
         param.alpha_per_class = float(param.alpha) / data['n_class']
-        cache['y_train_counts'] = hist_count(data['y_train'], range(data['n_class']))
-        cache['range_n_class'] = range(data['n_class'])
+        cache['y_train_counts'] = hist_count(data['y_train'], list(range(data['n_class'])))
+        cache['range_n_class'] = list(range(data['n_class']))
         param.base_measure = (np.ones(data['n_class']) + 0.) / data['n_class']
         param.alpha_vec = param.base_measure * param.alpha
     else:
@@ -854,7 +854,7 @@ def update_posterior_node_incremental(tree, data, param, settings, cache, node_i
 
 
 def main():
-    print 'Running test_compute_metrics_classification()'
+    print('Running test_compute_metrics_classification()')
     test_compute_metrics_classification()
 
 

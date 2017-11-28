@@ -41,15 +41,15 @@ def compute_kl(mean_1, log_prec_1, mean_2, log_prec_2):
     else:
         kl[idx_log_prec_2_posinf] = np.inf
     if False:
-        print 'log_prec_1 = %s, log_prec_2 = %s, kl = %s' % (log_prec_1, log_prec_2, kl)
+        print('log_prec_1 = %s, log_prec_2 = %s, kl = %s' % (log_prec_1, log_prec_2, kl))
     if np.any(np.isnan(kl)):
-        print '\nsomething went wrong with kl computation'
-        print 'var_1 = %s, var_2 = %s' % (var_1, var_2)
-        print 'log_prec_1 = %s, log_prec_2 = %s' % (log_prec_1, log_prec_2)
-        print 'idx_log_prec_1_neginf = %s' % idx_log_prec_1_neginf
-        print 'idx_log_prec_2_neginf = %s' % idx_log_prec_2_neginf
-        print 'idx_log_prec_2_posinf = %s' % idx_log_prec_2_posinf
-        print 'kl = %s' % kl
+        print('\nsomething went wrong with kl computation')
+        print('var_1 = %s, var_2 = %s' % (var_1, var_2))
+        print('log_prec_1 = %s, log_prec_2 = %s' % (log_prec_1, log_prec_2))
+        print('idx_log_prec_1_neginf = %s' % idx_log_prec_1_neginf)
+        print('idx_log_prec_2_neginf = %s' % idx_log_prec_2_neginf)
+        print('idx_log_prec_2_posinf = %s' % idx_log_prec_2_posinf)
+        print('kl = %s' % kl)
         raise Exception
     return kl
 
@@ -88,8 +88,8 @@ def divide_gaussians(mean_precision_num, mean_precision_den):
     try:
         assert precision_op >= 0.        #   making it > so that mean_op is not inf
     except AssertionError:
-        print 'inputs = %s, %s' % (mean_precision_num, mean_precision_den)
-        print 'precision_op = %s' % (precision_op)
+        print('inputs = %s, %s' % (mean_precision_num, mean_precision_den))
+        print('precision_op = %s' % (precision_op))
         raise AssertionError
     if precision_op == 0.:
         mean_op = 0.
@@ -158,22 +158,22 @@ def assert_no_nan(mat, name='matrix'):
     try:
         assert(not any(np.isnan(mat)))
     except AssertionError:
-        print '%s contains NaN' % name
-        print mat
+        print('%s contains NaN' % name)
+        print(mat)
         raise AssertionError
 
 def check_if_one(val):
     try:
         assert(np.abs(val - 1) < 1e-9)
     except AssertionError:
-        print 'val = %s (needs to be equal to 1)' % val
+        print('val = %s (needs to be equal to 1)' % val)
         raise AssertionError
 
 def check_if_zero(val):
     try:
         assert(np.abs(val) < 1e-9)
     except AssertionError:
-        print 'val = %s (needs to be equal to 0)' % val
+        print('val = %s (needs to be equal to 0)' % val)
         raise AssertionError
 
 
@@ -192,8 +192,8 @@ def sample_multinomial(prob):
     try:
         k = int(np.where(np.random.multinomial(1, prob, size=1)[0]==1)[0])
     except TypeError:
-        print 'problem in sample_multinomial: prob = '
-        print prob
+        print('problem in sample_multinomial: prob = ')
+        print(prob)
         raise TypeError
     except:
         raise Exception

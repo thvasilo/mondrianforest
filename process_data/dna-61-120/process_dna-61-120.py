@@ -6,7 +6,7 @@
 #           closest to the junction are used. In the StatLog version, 
 #           this means using attributes A61 to A120 only."
 
-import cPickle as pickle
+import pickle as pickle
 import sys
 
 data = pickle.load(open('../dna/dna.p', 'rb'))
