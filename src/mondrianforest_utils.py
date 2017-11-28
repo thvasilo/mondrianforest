@@ -10,6 +10,7 @@ import numpy as np
 import random
 
 import scipy.io
+from scipy.io import arff
 from warnings import warn
 try:
     from scipy.special import gammaln, digamma
@@ -258,8 +259,7 @@ def load_data(settings):
         n_dim = int(settings.dataset[14:])
         data = load_toy_hypercube(n_dim, settings, settings.optype == 'class')
     elif settings.dataset[:14] == 'airline-delays':
-        filename = settings.data_path + 'airline-delays/' + settings.dataset + '.p'
-        data = pickle.load(open(filename, 'rb'))
+        data = load_airlines_data()
     else:
         print('Unknown dataset: ' + settings.dataset)
         raise Exception
@@ -390,6 +390,24 @@ def gen_hypercube_data(n_points, n_dim, class_output, f_values=None):
         y = f + y_sd * np.random.randn(n_points)
     return (x, y, f, f_values)
 
+def load_airlines_data():
+    def translate_arff(data, meta):
+        X = data[meta.names()[:-1]]  # everything but the last column
+        X = X.view(np.float).reshape(data.shape + (-1,)) #converts the record array to a normal numpy array
+        y = data[meta.names()[-1]]
+        y = y.view(np.float)
+        return X, y
+    path_to_airlines = "/home/tvas/data/airlines-orig/"
+    selected_dataset = "plane_700K"
+    train_data, train_meta = arff.loadarff(path_to_airlines + selected_dataset + "_train.arff")
+    test_data, test_meta = arff.loadarff(path_to_airlines + selected_dataset + "_test.arff")
+    train_X, train_y = translate_arff(train_data, train_meta)
+    test_X, test_y= translate_arff(test_data, test_meta)
+    data = {'x_train': train_X, 'y_train': train_y,
+            'n_dim': len(train_meta.names()) - 1, 'n_train': len(train_X),
+            'x_test': test_X, 'y_test': test_y, 'n_test': len(test_X),
+            'is_sparse': False}
+    return data
 
 def load_msg_data():
     mat = scipy.io.loadmat('wittawat/demo_uncertainty_msgs_4d.mat')
@@ -806,6 +824,7 @@ def precompute_minimal(data, settings):
         cache['sum_y2'] = float(np.sum(data['y_train'] ** 2))
         cache['n_points'] = len(data['y_train'])
         warn('initializing prior mean and precision to their true values')
+        # tvas: This feels very wrong are we leaking information from the test?
         # FIXME: many of the following are relevant only for mondrian forests
         param.prior_mean = np.mean(data['y_train'])
         param.prior_variance = np.var(data['y_train'])
