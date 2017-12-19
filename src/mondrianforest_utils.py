@@ -10,7 +10,6 @@ import numpy as np
 import random
 
 import scipy.io
-from scipy.io import arff
 from warnings import warn
 try:
     from scipy.special import gammaln, digamma
@@ -33,7 +32,7 @@ except:
 from utils import hist_count, logsumexp, softmax, sample_multinomial, \
         sample_multinomial_scores, empty, assert_no_nan, linear_regression, \
         check_if_zero, check_if_one, logsumexp_array
-
+import arff  # pip install liac-arff
 
 class Forest(object):
     def __init__(self):
@@ -129,6 +128,8 @@ def compute_gaussian_logpdf(e_x, variance, x):
 
 def parser_add_common_options():
     parser = optparse.OptionParser()
+    parser.add_option('--path', dest='path', default='data/airlines-orig/',
+                      help='path to the dataset  [default: %default]')
     parser.add_option('--dataset', dest='dataset', default='toy-mf',
             help='name of the dataset  [default: %default]')
     parser.add_option('--normalize_features', dest='normalize_features', default=1, type='int',
@@ -223,10 +224,10 @@ def check_dataset(settings):
     regression_datasets = set(['housing', 'kin40k'])
     special_cases = settings.dataset[:3] == 'toy' or settings.dataset[:4] == 'rsyn' \
             or settings.dataset[:8] == 'ctslices' or settings.dataset[:3] == 'msd' \
-            or settings.dataset[:6] == 'houses' or settings.dataset[:9] == 'halfmoons' \
+            or settings.dataset[:6] == 'boston' or settings.dataset[:9] == 'halfmoons' \
             or settings.dataset[:3] == 'sim' or settings.dataset == 'navada' \
-            or settings.dataset[:3] == 'msg' or settings.dataset[:14] == 'airline-delays' \
-            or settings.dataset == 'branin'
+            or settings.dataset[:3] == 'msg' \
+            or settings.dataset == 'branin' or settings.dataset == 'regression'
     if not special_cases:
         try:
             if settings.optype == 'class':
@@ -240,12 +241,41 @@ def check_dataset(settings):
     return special_cases
 
 
+def load_arff_data(filepath, is_regression=True):
+    from sklearn.model_selection import train_test_split
+
+    with open(filepath, 'r') as f:
+        decoder = arff.ArffDecoder()
+        d = decoder.decode(f, encode_nominal=True)
+
+    data = np.array(d['data'])
+    X = data[:, :-1]
+    y = data[:, -1]
+
+    rng = np.random.RandomState(0)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=rng)  # TODO: Test size should be an arg
+    n_dim = X_train.shape[1]
+    n_train = X_train.shape[0]
+    n_test = X_test.shape[0]
+    n_class = 1 if is_regression else np.unique(y_train)
+
+    data = {'x_train': X_train, 'y_train': y_train, 'n_class': n_class,
+            'n_dim': n_dim, 'n_train': n_train, 'x_test': X_test,
+            'y_test': y_test, 'n_test': n_test, 'is_sparse': False}
+
+    return data
+
 def load_data(settings):
     data = {}
     special_cases = check_dataset(settings)
     if not special_cases:
-        data = pickle.load(open(settings.data_path + settings.dataset + '/' + \
-                settings.dataset + '.p', "rb"))
+        # data = pickle.load(open(settings.data_path + settings.dataset + '/' + \
+        #         settings.dataset + '.p', "rb"))
+        from os.path import join
+        filepath = join(settings.data_path, settings.dataset)
+        is_regression = settings.optype == "real"
+        data = load_arff_data(filepath, is_regression)
     elif settings.dataset == 'toy-mf':
         data = load_toy_mf_data()
     elif settings.dataset == 'msg-4dim':
@@ -258,8 +288,12 @@ def load_data(settings):
     elif settings.dataset[:13] == 'toy-hypercube':
         n_dim = int(settings.dataset[14:])
         data = load_toy_hypercube(n_dim, settings, settings.optype == 'class')
-    elif settings.dataset[:14] == 'airline-delays':
-        data = load_airlines_data()
+    # elif settings.dataset[:14] == 'airline-delays':
+    #     data = load_airlines_data(settings.path)
+    elif settings.dataset == 'boston':
+        data = load_boston_data()
+    elif settings.dataset == 'regression':
+        data = load_generated_regression()
     else:
         print('Unknown dataset: ' + settings.dataset)
         raise Exception
@@ -316,9 +350,9 @@ def load_data(settings):
             draw_mondrian = settings.draw_mondrian
         except AttributeError:
             draw_mondrian = False
-        if is_mondrianforest and (not draw_mondrian):
-            reset_random_seed(settings)
-            np.random.shuffle(train_ids)
+        # if is_mondrianforest and (not draw_mondrian):
+        #     reset_random_seed(settings)
+        #     np.random.shuffle(train_ids)
             # NOTE: shuffle should be the first call after resetting random seed
             #       all experiments would NOT use the same dataset otherwise
         train_ids_cumulative = np.arange(0)
@@ -390,24 +424,40 @@ def gen_hypercube_data(n_points, n_dim, class_output, f_values=None):
         y = f + y_sd * np.random.randn(n_points)
     return (x, y, f, f_values)
 
-def load_airlines_data():
-    def translate_arff(data, meta):
-        X = data[meta.names()[:-1]]  # everything but the last column
-        X = X.view(np.float).reshape(data.shape + (-1,)) #converts the record array to a normal numpy array
-        y = data[meta.names()[-1]]
-        y = y.view(np.float)
-        return X, y
-    path_to_airlines = "/home/tvas/data/airlines-orig/"
-    selected_dataset = "plane_700K"
-    train_data, train_meta = arff.loadarff(path_to_airlines + selected_dataset + "_train.arff")
-    test_data, test_meta = arff.loadarff(path_to_airlines + selected_dataset + "_test.arff")
-    train_X, train_y = translate_arff(train_data, train_meta)
-    test_X, test_y= translate_arff(test_data, test_meta)
-    data = {'x_train': train_X, 'y_train': train_y,
-            'n_dim': len(train_meta.names()) - 1, 'n_train': len(train_X),
-            'x_test': test_X, 'y_test': test_y, 'n_test': len(test_X),
+
+def load_boston_data():
+    from sklearn.datasets import load_boston
+    from sklearn.model_selection import train_test_split
+
+    X, y = load_boston(return_X_y=True)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+    data = {'x_train': X_train, 'y_train': y_train,
+            'n_dim': X_train.shape[1], 'n_train': len(X_train),
+            'x_test': X_test, 'y_test': y_test, 'n_test': len(X_test),
             'is_sparse': False}
+
     return data
+
+
+def load_generated_regression():
+    from sklearn.datasets import make_regression
+    from sklearn.datasets import make_friedman2
+    from sklearn.model_selection import train_test_split
+
+    X, y = make_regression(n_samples=1000, n_features=50, n_informative=50, random_state=0)
+    # X, y = make_friedman2(n_samples=100)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+    data = {'x_train': X_train, 'y_train': y_train,
+            'n_dim': X_train.shape[1], 'n_train': len(X_train),
+            'x_test': X_test, 'y_test': y_test, 'n_test': len(X_test),
+            'is_sparse': False}
+
+    return data
+
 
 def load_msg_data():
     mat = scipy.io.loadmat('wittawat/demo_uncertainty_msgs_4d.mat')
